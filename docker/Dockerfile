@@ -9,9 +9,9 @@ FROM louislam/dockge:build-healthcheck AS build_healthcheck
 FROM louislam/dockge:base AS build_frontend
 WORKDIR /app
 COPY --chown=node:node . .
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install && \
-    pnpm run build:frontend
+RUN --mount=type=cache,id=npm,target=/npm/store \
+    npm install && \
+    npm run build:frontend
 
 ############################################
 # Install node modules
@@ -49,5 +49,5 @@ CMD ["tsx", "./backend/index.ts"]
 ############################################
 # Mark as Nightly
 ############################################
-FROM release AS nightly
-RUN npm run mark-as-nightly
+#FROM release AS nightly
+#RUN npm run mark-as-nightly
