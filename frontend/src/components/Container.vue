@@ -16,31 +16,33 @@
             </div>
             <div class="col-7">
                 <div class="function">
-                    <router-link v-if="!isEditMode" class="btn btn-normal" :to="terminalRouteLink" disabled="">
-                        <font-awesome-icon icon="terminal" />
-                        Bash
-                    </router-link>
-                    <button v-if="status !== 'running' && status !== 'healthy'"
-                            class="btn btn-primary me-2"
-                            :disabled="processing"
-                            @click="startService">
-                        <font-awesome-icon icon="play" class="me-1" />
-                        Start
-                    </button>
-                    <button v-if="status === 'running' || status === 'healthy' || status === 'unhealthy'"
-                            class="btn btn-danger me-2"
-                            :disabled="processing"
-                            @click="stopService">
-                        <font-awesome-icon icon="stop" class="me-1" />
-                        Stop
-                    </button>
-                    <button v-if="status === 'running' || status === 'healthy' || status === 'unhealthy'"
-                            class="btn btn-warning me-2"
-                            :disabled="processing"
-                            @click="restartService">
-                        <font-awesome-icon icon="sync" class="me-1" />
-                        Restart
-                    </button>
+                    <div class="btn-group me-2" role="group">
+                        <router-link v-if="!isEditMode && (status === 'running' || status === 'healthy')" class="btn btn-normal" :to="terminalRouteLink" disabled="">
+                            <font-awesome-icon icon="terminal" />
+                            Bash
+                        </router-link>
+                        <button v-if="!isEditMode && status !== 'running' && status !== 'healthy'"
+                                class="btn btn-primary"
+                                :disabled="processing"
+                                @click="startService">
+                            <font-awesome-icon icon="play" class="me-1" />
+                            {{ $t("startStack") }}
+                        </button>
+                        <button v-if="!isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
+                                class="btn btn-normal"
+                                :disabled="processing"
+                                @click="restartService">
+                            <font-awesome-icon icon="rotate" class="me-1" />
+                            {{ $t("restartStack") }}
+                        </button>
+                        <button v-if="!isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
+                                class="btn btn-normal"
+                                :disabled="processing"
+                                @click="stopService">
+                            <font-awesome-icon icon="stop" class="me-1" />
+                            {{ $t("stopStack") }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -180,9 +182,16 @@ export default defineComponent({
         status: {
             type: String,
             default: "N/A",
+        },
+        processing: {
+            type: Boolean,
+            default: false,
         }
     },
     emits: [
+        "start-service",
+        "stop-service",
+        "restart-service"
     ],
     data() {
         return {
