@@ -21,21 +21,21 @@
                             <font-awesome-icon icon="terminal" />
                             Bash
                         </router-link>
-                        <button v-if="!isEditMode && status !== 'running' && status !== 'healthy'"
+                        <button v-if="this.serviceCount > 1 && !isEditMode && status !== 'running' && status !== 'healthy'"
                                 class="btn btn-primary"
                                 :disabled="processing"
                                 @click="startService">
                             <font-awesome-icon icon="play" class="me-1" />
                             {{ $t("startStack") }}
                         </button>
-                        <button v-if="!isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
+                        <button v-if="this.serviceCount > 1 && !isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
                                 class="btn btn-normal"
                                 :disabled="processing"
                                 @click="restartService">
                             <font-awesome-icon icon="rotate" class="me-1" />
                             {{ $t("restartStack") }}
                         </button>
-                        <button v-if="!isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
+                        <button v-if="this.serviceCount > 1 && !isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
                                 class="btn btn-normal"
                                 :disabled="processing"
                                 @click="stopService">
@@ -258,6 +258,10 @@ export default defineComponent({
                 return {};
             }
             return this.jsonObject.services[this.name];
+        },
+
+        serviceCount() {
+            return Object.keys(this.jsonObject.services).length;
         },
 
         jsonObject() {
