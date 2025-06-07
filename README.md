@@ -16,20 +16,20 @@ View Video: https://youtu.be/AWAlOQeNpgU?t=48
 
 - Builds frontend during docker build (#634 originally by:@Jamie- edited to use npm instead)
 - Agent friendly names (#414 by: @lohrbini)
-	Bug fixes and changes by me:
+	- Bug fixes and changes by me:
 		- Renamed the "Current" Agent from "Controller" back to the original name
 		- Removed edit button from "Current" agent (You can't rename the current agent so having the edit button caused multiple bugs)
 		- Removed empty brackets from stacks hosted by the "Current" agent
 - Improved stack list UI when using multiple agents (#800 by: @maca134)
-	Bug fixes and changes by me:
+	- Bug fixes and changes by me:
 		- Adjusted to display names not just url's
 		- Reverted removal of the endpoint sub title in the stack list (Nice when the group title is scrolled off screen)
 - Replaced editor with Codemirror solving a few bugs caused  by Prism (#786 by:@andersmmg)
-	Changes by me:
+	- Changes by me:
 		- Swapped back to louislam/dockge in package.json
 - Removed logging of terminal buffer to console (#582 by:@black-dragon74)
 - Individual container controls (#649 by:@mizady)
-	Bug fixes and changes by me:
+	- Bug fixes and changes by me:
 		- Switched to a button group and matched existing UI style (no more eye searing stop and restart buttons)
 		- Fixed message output to include a space after Service
 		- Added Processing prop and Start,Stop,Restart events
