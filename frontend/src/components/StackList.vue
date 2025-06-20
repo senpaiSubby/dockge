@@ -2,6 +2,10 @@
     <div class="shadow-box mb-3" :style="boxStyle">
         <div class="list-header">
             <div class="header-top">
+                <div class="d-flex align-items-center small-padding">
+                    <span class="stack-count-badge">{{ totalStackCount }}</span>
+                </div>
+
                 <!-- TODO -->
                 <button v-if="false" class="btn btn-outline-normal ms-2" :class="{ 'active': selectMode }" type="button"
                     @click="selectMode = !selectMode">
@@ -100,6 +104,14 @@ export default {
         };
     },
     computed: {
+        /**
+         * Returns the total number of stacks in the complete stack list.
+         * @returns {number} The total count of stacks.
+         */
+        totalStackCount() {
+            return Object.keys(this.$root.completeStackList).length;
+        },
+
         /**
          * Improve the sticky appearance of the list by increasing its
          * height as user scrolls down.
@@ -379,6 +391,20 @@ export default {
 
 <style lang="scss" scoped>
 @import "../styles/vars.scss";
+
+.stack-count-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-right: 0;
+    flex-shrink: 0;
+}
 
 .shadow-box {
     height: calc(100vh - 150px);
