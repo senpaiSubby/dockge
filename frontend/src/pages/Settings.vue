@@ -135,21 +135,30 @@ export default {
          * @param {saveSettingsCB} [callback]
          * @param {string} [currentPassword] Only need for disableAuth to true
          */
-        saveSettings(callback, currentPassword) {
-            let valid = this.validateSettings();
-            if (valid.success) {
-                this.$root.getSocket().emit("setSettings", this.settings, currentPassword, (res) => {
-                    this.$root.toastRes(res);
-                    this.loadSettings();
+    saveSettings(callback, currentPassword) {
+        let valid = this.validateSettings();
+        if (valid.success) {
+            this.$root.getSocket().emit("setSettings", this.settings, currentPassword, (res) => {
+                this.$root.toastRes(res);
 
-                    if (callback) {
-                        callback();
+                // Immediately reload settings into $root after save
+                this.$root.getSocket().emit("getSettings", (res2) => {
+                    if (res2.ok && res2.data) {
+                        this.$root.settings = res2.data;
+                        this.$root.settingsLoaded = true;
                     }
                 });
-            } else {
-                this.$root.toastError(valid.msg);
-            }
-        },
+
+                this.loadSettings();
+
+                if (callback) {
+                    callback();
+                }
+            });
+        } else {
+            this.$root.toastError(valid.msg);
+        }
+    },
 
         /**
          * Ensure settings are valid

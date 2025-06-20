@@ -1,5 +1,6 @@
 <template>
     <div>
+        <!-- Language selection -->
         <div class="my-4">
             <label for="language" class="form-label">
                 {{ $t("Language") }}
@@ -14,6 +15,37 @@
                 </option>
             </select>
         </div>
+
+        <!-- App Name -->
+        <div class="mb-4">
+            <label class="form-label" for="appName">
+                {{ $t("App Name") }}
+            </label>
+            <input
+                id="appName"
+                v-model="settings.appName"
+                class="form-control"
+                :placeholder="$t('App Name')"
+                @blur="saveSettings"
+            />
+        </div>
+
+        <!-- App Icon -->
+        <div class="mb-4">
+            <label class="form-label" for="appIcon">
+                {{ $t("App Icon") }}
+            </label>
+            <input
+                id="appIcon"
+                type="file"
+                accept="image/*"
+                class="form-control"
+                @change="onIconChange"
+            />
+        </div>
+
+
+        <!-- Theme selection -->
         <div v-show="true" class="my-4">
             <label for="timezone" class="form-label">{{ $t("Theme") }}</label>
             <div>
@@ -68,7 +100,34 @@
 
 <script>
 export default {
-
+    computed: {
+        settings() {
+            // Inherit settings object from parent (Settings.vue)
+            return this.$parent.$parent.$parent.settings;
+        },
+        saveSettings() {
+            // Inherit saveSettings method from parent (Settings.vue)
+            return this.$parent.$parent.$parent.saveSettings;
+        },
+        settingsLoaded() {
+            return this.$parent.$parent.$parent.settingsLoaded;
+        },
+    },
+    methods: {
+        /** Handle icon upload */
+        onIconChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                this.settings.appIcon = e.target.result;
+                this.saveSettings();
+            };
+            
+            reader.readAsDataURL(file);
+            }
+        },
+    }
 };
 </script>
 

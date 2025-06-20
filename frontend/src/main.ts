@@ -54,6 +54,8 @@ function rootApp() {
                 loggedIn: false,
                 allowLoginDialog: false,
                 username: null,
+                settings: {},
+                settingsLoaded: false,
             };
         },
         computed: {
@@ -87,7 +89,7 @@ function rootApp() {
              * @param {string} msg Message to show
              * @returns {void}
              */
-            toastSuccess(msg : string) {
+            toastSuccess(msg: string) {
                 toast.success(this.$t(msg));
             },
 
@@ -96,7 +98,7 @@ function rootApp() {
              * @param {string} msg Message to show
              * @returns {void}
              */
-            toastError(msg : string) {
+            toastError(msg: string) {
                 toast.error(this.$t(msg));
             },
         },

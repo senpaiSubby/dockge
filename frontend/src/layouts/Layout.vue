@@ -10,10 +10,25 @@
         </div>
 
         <!-- Desktop header -->
-        <header v-if="! $root.isMobile" class="d-flex flex-wrap justify-content-center py-3 mb-3 border-bottom">
+         
+        <header v-if="! $root.isMobile" class="d-flex flex-wrap justify-content-center py-2 mb-3 border-bottom">
             <router-link to="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
-                <object class="bi me-2 ms-4" width="40" height="40" data="/icon.svg" />
-                <span class="fs-4 title">Dockge</span>
+                <img
+                    v-if="$root.settings && $root.settings.appIcon"
+                    :src="$root.settings.appIcon"
+                    alt="App Icon"
+                     class="bi me-2 ms-4"
+                    style="width: 32px; height: 32px; margin-right: 8px;"
+                />
+                <object
+                    v-else
+                    width="32"
+                    height="32"
+                    data="/icon.svg"
+                    style="margin-right: 8px;"
+                    class="bi me-2 ms-4"
+                />
+                <span class="fs-4 title"> {{ $root.settings && $root.settings.appName ? $root.settings.appName : 'Dockge' }} </span>
             </router-link>
 
             <a v-if="hasNewVersion" target="_blank" href="https://github.com/louislam/dockge/releases" class="btn btn-warning me-3">
@@ -137,7 +152,14 @@ export default {
     },
 
     mounted() {
-
+        if (!this.$root.settingsLoaded) {
+            this.$root.getSocket().emit("getSettings", (res) => {
+                if (res.ok && res.data) {
+                    this.$root.settings = res.data;
+                    this.$root.settingsLoaded = true;
+                }
+            });
+        }
     },
 
     beforeUnmount() {
