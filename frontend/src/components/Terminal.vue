@@ -129,6 +129,34 @@ export default {
         }
         // Fit the terminal width to the div container size after terminal is created.
         this.updateTerminalSize();
+        
+        // Add paste event listener
+        if (this.terminal.textarea) {
+            this.terminal.textarea.addEventListener("paste", (event) => {
+                const textToPaste = event.clipboardData.getData("text");
+                if (!textToPaste) return;
+
+                // For interactive terminals, send directly to backend
+                if (this.mode === "interactive") {
+                    // Write to terminal visually
+                    this.terminal.write(textToPaste);
+
+                    // Send to backend (simulate as if user typed)
+                    this.$root.emitAgent(this.endpoint, "terminalInput", this.name, textToPaste, (res) => {
+                        if (!res.ok) {
+                            this.$root.toastRes(res);
+                        }
+                    });
+                } else if (this.mode === "mainTerminal") {
+                    // For mainTerminal, append to buffer and write visually
+                    this.cursorPosition += textToPaste.length;
+                    this.terminalInputBuffer += textToPaste;
+                    this.terminal.write(textToPaste);
+                }
+                // Prevent default paste behavior
+                event.preventDefault();
+            });
+        }
     },
 
     unmounted() {
