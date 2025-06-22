@@ -79,6 +79,15 @@ export class AgentManager {
      * @param name
      */
     async add(url: string, username: string, password: string, name: string): Promise<Agent> {
+    // Ensure the 'name' column exists before saving
+    const knexInstance = R.knex;
+    const hasColumn = await knexInstance.schema.hasColumn("agent", "name");
+    if (!hasColumn) {
+        await knexInstance.schema.alterTable("agent", (table: import("knex").Knex.AlterTableBuilder) => {
+            table.string("name", 255);
+        });
+    }
+        
         let bean = R.dispense("agent") as Agent;
         bean.url = url;
         bean.username = username;
@@ -114,6 +123,15 @@ export class AgentManager {
      * @param updatedName
      */
     async update(url: string, updatedName: string) {
+    // Ensure the 'name' column exists before updating
+    const knexInstance = R.knex;
+    const hasColumn = await knexInstance.schema.hasColumn("agent", "name");
+    if (!hasColumn) {
+        await knexInstance.schema.alterTable("agent", (table: import("knex").Knex.AlterTableBuilder) => {
+            table.string("name", 255);
+        });
+    }
+
         const agent = await R.findOne("agent", " url = ? ", [
             url,
         ]);
