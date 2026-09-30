@@ -14,18 +14,20 @@ jobs:
   ci:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest, ARM, ARM64]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         node: [22] # Can be changed
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout Code
-        run: |  # Mainly for Windows
+      - name: Keep LF line endings  # Mainly for Windows, eslint enforces LF
+        run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
+
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
 

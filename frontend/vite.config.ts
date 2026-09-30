@@ -14,6 +14,8 @@ export default defineConfig({
     },
     define: {
         "FRONTEND_VERSION": JSON.stringify(process.env.npm_package_version),
+        // Git commit the image was built from (set by the Dockerfile), empty for local builds
+        "FRONTEND_COMMIT": JSON.stringify((process.env.DOCKGE_COMMIT ?? "").slice(0, 7)),
     },
     root: "./frontend",
     build: {

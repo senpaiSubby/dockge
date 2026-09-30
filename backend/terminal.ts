@@ -229,6 +229,13 @@ export class Terminal {
                 return;
             }
 
+            // The progress terminal is only a few rows tall. Compose's default progress output redraws a
+            // block with one line per container, which can't redraw in place once the stack has more
+            // containers than rows, so every frame piles up. Plain progress prints one line per event.
+            if (file === "docker" && Array.isArray(args) && args[0] === "compose") {
+                args = [ "compose", "--progress", "plain", ...args.slice(1) ];
+            }
+
             let terminal = new Terminal(server, terminalName, file, args, cwd);
             terminal.rows = PROGRESS_TERMINAL_ROWS;
 

@@ -129,12 +129,14 @@ export default {
         }
         // Fit the terminal width to the div container size after terminal is created.
         this.updateTerminalSize();
-        
+
         // Add paste event listener
         if (this.terminal.textarea) {
             this.terminal.textarea.addEventListener("paste", (event) => {
                 const textToPaste = event.clipboardData.getData("text");
-                if (!textToPaste) return;
+                if (!textToPaste) {
+                    return;
+                }
 
                 // For interactive terminals, send directly to backend
                 if (this.mode === "interactive") {

@@ -427,15 +427,19 @@ export class DockgeServer {
         let versionProperty;
         let latestVersionProperty;
         let isContainer;
+        let commit;
 
         if (!hideVersion) {
             versionProperty = packageJSON.version;
+            // Git commit the image was built from (set by the Dockerfile)
+            commit = process.env.DOCKGE_COMMIT?.slice(0, 7) || undefined;
             latestVersionProperty = checkVersion.latestVersion;
             isContainer = (process.env.DOCKGE_IS_CONTAINER === "1");
         }
 
         socket.emit("info", {
             version: versionProperty,
+            commit,
             latestVersion: latestVersionProperty,
             isContainer,
             primaryHostname: await Settings.get("primaryHostname"),

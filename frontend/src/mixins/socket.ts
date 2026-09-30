@@ -89,6 +89,15 @@ export default defineComponent({
         },
 
         /**
+         * Short git commit the frontend was built from, empty if unknown
+         * @returns {string}
+         */
+        frontendCommit() {
+            // eslint-disable-next-line no-undef
+            return FRONTEND_COMMIT;
+        },
+
+        /**
          * Are both frontend and backend in the same version?
          * @returns {boolean}
          */

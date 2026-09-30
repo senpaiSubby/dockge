@@ -74,6 +74,7 @@ export class Stack {
             ...obj,
             composeYAML: this.composeYAML,
             composeENV: this.composeENV,
+            gitRepos: await this.getGitBuildRepos(),
             primaryHostname,
         };
     }
@@ -310,6 +311,7 @@ export class Stack {
         }
 
         let composeList = JSON.parse(res.stdout.toString());
+        let statusList = await this.convertStatusList(composeList);
 
         for (let composeStack of composeList) {
             let stack = stackList.get(composeStack.Name);
@@ -324,7 +326,7 @@ export class Stack {
                 stackList.set(composeStack.Name, stack);
             }
 
-            stack._status = this.statusConvert(composeStack.Status);
+            stack._status = statusList.get(composeStack.Name) ?? UNKNOWN;
             stack._configFilePath = composeStack.ConfigFiles;
         }
 
@@ -346,13 +348,49 @@ export class Stack {
             return statusList;
         }
 
-        let composeList = JSON.parse(res.stdout.toString());
+        return this.convertStatusList(JSON.parse(res.stdout.toString()));
+    }
+
+    /**
+     * Convert the `docker compose ls` output to a status map.
+     * A stack with running services whose exited containers all exited with code 0
+     * (one-shot init/migration jobs) counts as running.
+     */
+    static async convertStatusList(composeList : { Name: string, Status: string }[]) : Promise<Map<string, number>> {
+        let statusList = new Map<string, number>();
+        let mixed = composeList.filter((s) => s.Status.includes("exited") && s.Status.includes("running"));
+        let failedProjects = mixed.length > 0 ? await this.getFailedProjects() : new Set<string>();
 
         for (let composeStack of composeList) {
-            statusList.set(composeStack.Name, this.statusConvert(composeStack.Status));
+            let status = this.statusConvert(composeStack.Status);
+            if (mixed.includes(composeStack) && !failedProjects.has(composeStack.Name)) {
+                status = RUNNING;
+            }
+            statusList.set(composeStack.Name, status);
         }
-
         return statusList;
+    }
+
+    /**
+     * Compose projects that have at least one container exited with a non-zero code
+     */
+    static async getFailedProjects() : Promise<Set<string>> {
+        let failed = new Set<string>();
+        try {
+            let res = await childProcessAsync.spawn("docker", [ "ps", "-a", "--filter", "status=exited", "--format", "{{.Label \"com.docker.compose.project\"}}\t{{.Status}}" ], {
+                encoding: "utf-8",
+            });
+            for (let line of res.stdout?.toString().split("\n") ?? []) {
+                let [ project, status ] = line.split("\t");
+                let code = status?.match(/Exited \((-?\d+)\)/)?.[1];
+                if (project && code !== undefined && code !== "0") {
+                    failed.add(project);
+                }
+            }
+        } catch (e) {
+            log.error("getFailedProjects", e);
+        }
+        return failed;
     }
 
     /**
@@ -443,13 +481,138 @@ export class Stack {
         return exitCode;
     }
 
-    async update(socket: DockgeSocket) {
+    /**
+     * Find git repositories that are used as local build contexts by this stack.
+     * Only build contexts inside the stack folder are considered, e.g. `build: ./app`
+     * where `./app` (or the stack folder itself) is a git clone.
+     * Returns the repo root paths relative to the stack folder ("." for the stack folder itself).
+     */
+    async getGitBuildRepos() : Promise<string[]> {
+        if (!this.isManagedByDockge) {
+            return [];
+        }
+
+        let services : Record<string, unknown>;
+        try {
+            services = yaml.parse(this.composeYAML)?.services ?? {};
+        } catch (e) {
+            return [];
+        }
+
+        const stackDir = path.resolve(this.fullPath);
+        const repoSet = new Set<string>();
+
+        for (const service of Object.values(services)) {
+            const build = (service as { build?: unknown })?.build;
+            let context : unknown;
+            if (typeof build === "string") {
+                context = build;
+            } else if (build && typeof build === "object") {
+                context = (build as { context?: unknown }).context ?? ".";
+            } else {
+                continue;
+            }
+
+            // Skip remote contexts (git URLs, tarballs) and ones that need variable interpolation
+            if (typeof context !== "string" || context.includes("://") || context.startsWith("git@") || context.includes("$")) {
+                continue;
+            }
+
+            const contextDir = path.resolve(stackDir, context);
+            if (path.relative(stackDir, contextDir).startsWith("..")) {
+                continue;
+            }
+
+            // Walk up from the build context to the stack folder, looking for a .git entry
+            let dir = contextDir;
+            while (true) {
+                if (await fileExists(path.join(dir, ".git"))) {
+                    repoSet.add(path.relative(stackDir, dir) || ".");
+                    break;
+                }
+                if (dir === stackDir) {
+                    break;
+                }
+                dir = path.dirname(dir);
+            }
+        }
+
+        return [ ...repoSet ];
+    }
+
+    /**
+     * `git pull --ff-only` every git repo used as a build context.
+     */
+    async pullGitRepos(socket: DockgeSocket, repos : string[]) {
         const terminalName = getComposeTerminalName(socket.endpoint, this.name);
-        let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "pull" ], this.path);
+        for (const repo of repos) {
+            // The stacks folder is usually owned by another user than the one Dockge runs as
+            const exitCode = await Terminal.exec(this.server, socket, terminalName, "git", [ "-c", "safe.directory=*", "pull", "--ff-only" ], path.join(this.fullPath, repo));
+            if (exitCode !== 0) {
+                throw new Error(`Failed to git pull "${repo}", please check the terminal output for more information.`);
+            }
+        }
+    }
+
+    /**
+     * Update pull: for stacks that build from a git repo, git pull and rebuild the buildable services only.
+     * Other stacks: pull all images.
+     * Then restart if running.
+     */
+    async update(socket: DockgeSocket) {
+        const repos = await this.getGitBuildRepos();
+        const exitCode = repos.length > 0 ? await this.pullGitAndBuild(socket, repos) : await this.pullImages(socket, false);
+        return this.upIfRunning(socket, exitCode);
+    }
+
+    /**
+     * Update images: pull newer images for all services, then restart if running.
+     * For stacks with git build contexts, locally built images (and services reusing them) are skipped.
+     */
+    async updateImages(socket: DockgeSocket) {
+        const isGitStack = (await this.getGitBuildRepos()).length > 0;
+        const exitCode = await this.pullImages(socket, isGitStack);
+        return this.upIfRunning(socket, exitCode);
+    }
+
+    /**
+     * Update all: git pull + rebuild, pull the other images, then restart once if running.
+     */
+    async updateAll(socket: DockgeSocket) {
+        const repos = await this.getGitBuildRepos();
+        if (repos.length > 0) {
+            await this.pullGitAndBuild(socket, repos);
+        }
+        const exitCode = await this.pullImages(socket, repos.length > 0);
+        return this.upIfRunning(socket, exitCode);
+    }
+
+    protected async pullGitAndBuild(socket: DockgeSocket, repos : string[]) : Promise<number> {
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+        await this.pullGitRepos(socket, repos);
+
+        // Always build: unchanged sources hit the build cache, and it also picks up a manual git pull
+        const exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "build" ], this.path);
+        if (exitCode !== 0) {
+            throw new Error("Failed to build, please check the terminal output for more information.");
+        }
+        return exitCode;
+    }
+
+    protected async pullImages(socket: DockgeSocket, skipLocalImages : boolean) : Promise<number> {
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+        const args = [ "compose", "pull" ];
+        if (skipLocalImages) {
+            args.push("--ignore-buildable", "--ignore-pull-failures");
+        }
+        const exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", args, this.path);
         if (exitCode !== 0) {
             throw new Error("Failed to pull, please check the terminal output for more information.");
         }
+        return exitCode;
+    }
 
+    protected async upIfRunning(socket: DockgeSocket, exitCode : number) {
         // If the stack is not running, we don't need to restart it
         await this.updateStatus();
         log.debug("update", "Status: " + this.status);
@@ -457,6 +620,7 @@ export class Stack {
             return exitCode;
         }
 
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
         exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "up", "-d", "--remove-orphans" ], this.path);
         if (exitCode !== 0) {
             throw new Error("Failed to restart, please check the terminal output for more information.");

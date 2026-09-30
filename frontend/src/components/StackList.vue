@@ -8,7 +8,7 @@
 
                 <!-- TODO -->
                 <button v-if="false" class="btn btn-outline-normal ms-2" :class="{ 'active': selectMode }" type="button"
-                    @click="selectMode = !selectMode">
+                        @click="selectMode = !selectMode">
                     {{ $t("Select") }}
                 </button>
 
@@ -51,7 +51,7 @@
             </div>
             <div class="stack-list-inner" v-for="(agent, index) in agentStackList" :key="index">
                 <div v-if="$root.agentCount > 1" class="p-2 agent-select"
-                    @click="closedAgents.set(agent.endpoint, !closedAgents.get(agent.endpoint))">
+                     @click="closedAgents.set(agent.endpoint, !closedAgents.get(agent.endpoint))">
                     <span class="me-1">
                         <font-awesome-icon v-show="closedAgents.get(agent.endpoint)" icon="chevron-circle-right" />
                         <font-awesome-icon v-show="!closedAgents.get(agent.endpoint)" icon="chevron-circle-down" />
@@ -60,8 +60,8 @@
                     <span v-else>{{ this.$root.endpointDisplayFunction(agent.endpoint) }}</span>
                 </div>
                 <StackListItem v-show="$root.agentCount === 1 || !closedAgents.get(agent.endpoint)"
-                    v-for="(item, index) in agent.stacks" :key="index" :stack="item" :isSelectMode="selectMode"
-                    :isSelected="isSelected" :select="select" :deselect="deselect" />
+                               v-for="(item, index) in agent.stacks" :key="index" :stack="item" :isSelectMode="selectMode"
+                               :isSelected="isSelected" :select="select" :deselect="deselect" />
             </div>
         </div>
     </div>
@@ -207,7 +207,7 @@ export default {
             // and the rest are sorted alphabetically
             result = [
                 ...result.reduce((acc, stack) => {
-                    const endpoint = stack.endpoint || 'current';
+                    const endpoint = stack.endpoint || "current";
                     if (!acc.has(endpoint)) {
                         acc.set(endpoint, []);
                     }
@@ -218,9 +218,9 @@ export default {
                 endpoint,
                 stacks
             })).sort((a, b) => {
-                if (a.endpoint === 'current' && b.endpoint !== 'current') {
+                if (a.endpoint === "current" && b.endpoint !== "current") {
                     return -1;
-                } else if (a.endpoint !== 'current' && b.endpoint === 'current') {
+                } else if (a.endpoint !== "current" && b.endpoint === "current") {
                     return 1;
                 }
                 return a.endpoint.localeCompare(b.endpoint);
